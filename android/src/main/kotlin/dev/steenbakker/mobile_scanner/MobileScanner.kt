@@ -29,7 +29,7 @@ import java.io.File
 class MobileScanner(private val activity: Activity, private val textureRegistry: TextureRegistry)
     : MethodChannel.MethodCallHandler, EventChannel.StreamHandler, PluginRegistry.RequestPermissionsResultListener {
     companion object {
-        private const val REQUEST_CODE = 22022022
+        private const val REQUEST_CODE = 42
         private val TAG = MobileScanner::class.java.simpleName
     }
 
