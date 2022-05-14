@@ -32,9 +32,18 @@ static void data_handler(zbar::zbar_image_t *img, const void *userdata) {
     auto video_outlet_private =
             (VideoOutletPrivate *) video_outlet_get_instance_private(outlet);
 
-    video_outlet_private->buffer = (uint8_t *) zbar_image_get_data(img);
-    video_outlet_private->video_width = zbar_image_get_width(img);
-    video_outlet_private->video_height = zbar_image_get_height(img);
+//    int format = zbar_image_get_format(img);
+//    printf("%d", format);
+
+    // Convert to RGBA
+    zbar::zbar_image_t* converted = zbar_image_convert(img, zbar_fourcc('R', 'G', 'B', '3'));
+
+    video_outlet_private->buffer = (uint8_t *) zbar_image_get_data(converted);
+    video_outlet_private->video_width = zbar_image_get_width(converted);
+    video_outlet_private->video_height = zbar_image_get_height(converted);
+
+//    zbar_image_write(converted, "/home/igor/converted");
+//    zbar_image_write(img, "/home/igor/img");
 
     fl_texture_registrar_mark_texture_frame_available(texture_registrar, FL_TEXTURE(outlet));
 
@@ -67,8 +76,11 @@ static void data_handler(zbar::zbar_image_t *img, const void *userdata) {
 
         g_autoptr(GError) error = nullptr;
         fl_event_channel_send(event_channel, event, nullptr, &error);
-        continue;
     }
+}
+
+static void stop_scanning() {
+    zbar::zbar_processor_destroy(proc);
 }
 
 static int start_scanning() {
@@ -82,12 +94,12 @@ static int start_scanning() {
 
     const char *video_device = "/dev/video0";
     int display = 1;
-    unsigned long infmt = 0, outfmt = 0;
+    unsigned long infmt = 0, outfmt = 0;//0x41424752;
 
     if (infmt || outfmt) { zbar_processor_force_format(proc, infmt, outfmt); }
 
     if (zbar_processor_init(proc, video_device, display) ||
-        (display && zbar_processor_set_visible(proc, 0))) // TODO: toggle here
+        (display && zbar_processor_set_visible(proc, 1))) // TODO: toggle here
         return (zbar_processor_error_spew(proc, 0));
 
     int active = 1;
@@ -149,7 +161,11 @@ static void mobile_scanner_plugin_handle_method_call(
         fl_value_set(result, fl_value_new_string("size"), size);
 
         response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
-    } else {
+    } else if (strcmp(method, "stop") == 0) {
+        stop_scanning();
+        response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_null()));
+    }
+    else {
         response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
     }
 
